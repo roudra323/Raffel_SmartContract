@@ -23,10 +23,8 @@ contract DeployRaffel is Script {
         if (subscriptionId == 0) {
             // we need to create a subscription
             CreateSubscription createSubscription = new CreateSubscription();
-            subscriptionId = createSubscription.createSubscription(
-                vrfCoordinator,
-                deployerKey
-            );
+            (subscriptionId, vrfCoordinator) = createSubscription
+                .createSubscription(vrfCoordinator, deployerKey);
 
             // Fund Subscription
             FundSubscription fundSubscription = new FundSubscription();

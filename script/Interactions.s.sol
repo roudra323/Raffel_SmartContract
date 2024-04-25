@@ -8,9 +8,7 @@ import {LinkToken} from "../test/mocks/LinkToken.sol";
 import {DevOpsTools} from "lib/foundry-devops/src/DevOpsTools.sol";
 
 contract CreateSubscription is Script {
-    constructor() {}
-
-    function createSubscriptionUsingConfig() public returns (uint64) {
+    function createSubscriptionUsingConfig() public returns (uint64, address) {
         HelperConfig helperConfig = new HelperConfig();
         (, , address vrfCoordinator, , , , , uint256 deployerKey) = helperConfig
             .activeNetworkConfig();
@@ -20,7 +18,7 @@ contract CreateSubscription is Script {
     function createSubscription(
         address vrfCoordinator,
         uint256 deployerKey
-    ) public returns (uint64) {
+    ) public returns (uint64, address) {
         console.log("Creating Subscription for chain id: ", block.chainid);
 
         vm.startBroadcast(deployerKey);
@@ -29,10 +27,10 @@ contract CreateSubscription is Script {
         vm.stopBroadcast();
         console.log("Your subscription Id is: ", subId);
         console.log("Please update the subscriptionId in HelperConfig.s.sol");
-        return subId;
+        return (subId, vrfCoordinator);
     }
 
-    function run() external returns (uint64) {
+    function run() external returns (uint64, address) {
         return createSubscriptionUsingConfig();
     }
 }
@@ -40,7 +38,7 @@ contract CreateSubscription is Script {
 contract FundSubscription is Script {
     uint96 public constant FUND_AMOUNT = 1 ether;
 
-    function createSubscriptionUsingConfig() public {
+    function fundSubscriptionUsingConfig() public {
         HelperConfig helperConfig = new HelperConfig();
         (
             ,
@@ -52,7 +50,18 @@ contract FundSubscription is Script {
             address linkAddress,
             uint256 deployerKey
         ) = helperConfig.activeNetworkConfig();
-
+        if (subscriptionId == 0) {
+            CreateSubscription createSub = new CreateSubscription();
+            (uint64 updatedSubId, address updatedVRFv2) = createSub.run();
+            subscriptionId = updatedSubId;
+            vrfCoordinator = updatedVRFv2;
+            console.log(
+                "New SubId Created! ",
+                subscriptionId,
+                "VRF Address: ",
+                vrfCoordinator
+            );
+        }
         fundSubscription(
             vrfCoordinator,
             subscriptionId,
@@ -76,13 +85,17 @@ contract FundSubscription is Script {
         console.log("On chainID: ", block.chainid);
 
         if (block.chainid == 31337) {
-            vm.startBroadcast();
+            vm.startBroadcast(deployerKey);
             VRFCoordinatorV2Mock(vrfCoordinator).fundSubscription(
                 subscriptionId,
                 FUND_AMOUNT
             );
             vm.stopBroadcast();
         } else {
+            console.log(LinkToken(linkAddress).balanceOf(msg.sender));
+            console.log(msg.sender);
+            console.log(LinkToken(linkAddress).balanceOf(address(this)));
+            console.log(address(this));
             vm.startBroadcast(deployerKey);
             LinkToken(linkAddress).transferAndCall(
                 vrfCoordinator,
@@ -94,7 +107,7 @@ contract FundSubscription is Script {
     }
 
     function run() public {
-        createSubscriptionUsingConfig();
+        fundSubscriptionUsingConfig();
     }
 }
 
