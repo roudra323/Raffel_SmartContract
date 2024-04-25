@@ -10,7 +10,7 @@ import {DevOpsTools} from "lib/foundry-devops/src/DevOpsTools.sol";
 contract CreateSubscription is Script {
     function createSubscriptionUsingConfig() public returns (uint64, address) {
         HelperConfig helperConfig = new HelperConfig();
-        (, , address vrfCoordinator, , , , , uint256 deployerKey) = helperConfig
+        (, , , , , address vrfCoordinator, , uint256 deployerKey) = helperConfig
             .activeNetworkConfig();
         return createSubscription(vrfCoordinator, deployerKey);
     }
@@ -41,15 +41,16 @@ contract FundSubscription is Script {
     function fundSubscriptionUsingConfig() public {
         HelperConfig helperConfig = new HelperConfig();
         (
+            uint64 subscriptionId,
+            ,
+            ,
             ,
             ,
             address vrfCoordinator,
-            ,
-            uint64 subscriptionId,
-            ,
             address linkAddress,
             uint256 deployerKey
         ) = helperConfig.activeNetworkConfig();
+
         if (subscriptionId == 0) {
             CreateSubscription createSub = new CreateSubscription();
             (uint64 updatedSubId, address updatedVRFv2) = createSub.run();
@@ -134,12 +135,12 @@ contract AddConsumer is Script {
     function addConsumerUsinfConfig(address raffel) public {
         HelperConfig helperConfig = new HelperConfig();
         (
+            uint64 subscriptionId,
+            ,
+            ,
             ,
             ,
             address vrfCoordinator,
-            ,
-            uint64 subscriptionId /*address linkAddress*/,
-            ,
             ,
             uint256 deployerKey
         ) = helperConfig.activeNetworkConfig();

@@ -15,6 +15,7 @@ contract RaffelTest is Test {
     uint256 entranceFee;
     uint256 interval;
     address vrfCoordinator;
+    uint256 automationUpdateInterval;
     bytes32 gasLane;
     uint64 subscriptionId;
     uint32 callbackGasLimit;
@@ -30,15 +31,14 @@ contract RaffelTest is Test {
         DeployRaffel deployRaffel = new DeployRaffel();
         (raffel, helperConfig) = deployRaffel.run();
 
-        (, , , , , callbackGasLimit, linkToken, deployerKey) = helperConfig
-            .activeNetworkConfig();
         (
-            entranceFee,
-            interval,
-            vrfCoordinator,
-            gasLane,
-            subscriptionId,
             ,
+            gasLane,
+            automationUpdateInterval,
+            entranceFee,
+            callbackGasLimit,
+            vrfCoordinator, // link
+            // deployerKey
             ,
 
         ) = helperConfig.activeNetworkConfig();
@@ -86,13 +86,9 @@ contract RaffelTest is Test {
     function testCantEnterRaffelWhileCalculating() public {
         vm.prank(PLAYER);
         raffel.enterRaffle{value: entranceFee}();
-        vm.warp(block.timestamp + interval);
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
         vm.roll(block.number + 1);
         raffel.performUpkeep("");
-
-        uint256 raffelState = uint256(raffel.getRaffelState());
-        console.log("raffel state:", raffelState);
-
         vm.expectRevert(Raffel.Raffel__RaffelNotOpen.selector);
         vm.prank(PLAYER);
         raffel.enterRaffle{value: entranceFee}();
@@ -108,7 +104,7 @@ contract RaffelTest is Test {
     function testCheckUpKeepReturnsTrueIfEnoughTimeHasPassed() public {
         vm.prank(PLAYER);
         raffel.enterRaffle{value: entranceFee}();
-        vm.warp(block.timestamp + interval);
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
         vm.roll(block.number + 1);
         (bool isTrue, ) = raffel.checkUpkeep("");
         assert(isTrue);
@@ -122,7 +118,7 @@ contract RaffelTest is Test {
         // Arrange
         vm.prank(PLAYER);
         raffel.enterRaffle{value: entranceFee}();
-        vm.warp(block.timestamp + interval);
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
         vm.roll(block.number + 1);
 
         // Act / Assert
@@ -151,7 +147,7 @@ contract RaffelTest is Test {
         // Arrange
         vm.prank(PLAYER);
         raffel.enterRaffle{value: entranceFee}();
-        vm.warp(block.timestamp + interval + 1);
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
         vm.roll(block.number + 1);
         _;
     }

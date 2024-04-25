@@ -10,12 +10,12 @@ contract DeployRaffel is Script {
     function run() external returns (Raffel, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
         (
-            uint256 entranceFee,
-            uint256 interval,
-            address vrfCoordinator,
-            bytes32 gasLane,
             uint64 subscriptionId,
+            bytes32 gasLane,
+            uint256 automationUpdateInterval,
+            uint256 raffleEntranceFee,
             uint32 callbackGasLimit,
+            address vrfCoordinator,
             address linkToken,
             uint256 deployerKey
         ) = helperConfig.activeNetworkConfig();
@@ -38,12 +38,12 @@ contract DeployRaffel is Script {
 
         vm.startBroadcast(deployerKey);
         Raffel raffel = new Raffel(
-            entranceFee,
-            interval,
-            vrfCoordinator,
-            gasLane,
             subscriptionId,
-            callbackGasLimit
+            gasLane,
+            automationUpdateInterval,
+            raffleEntranceFee,
+            callbackGasLimit,
+            vrfCoordinator
         );
         vm.stopBroadcast();
 

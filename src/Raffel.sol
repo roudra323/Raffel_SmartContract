@@ -25,6 +25,7 @@ pragma solidity ^0.8.18;
 
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import {console} from "forge-std/console.sol";
 
 /**
  * @title Raffel
@@ -76,18 +77,18 @@ contract Raffel is VRFConsumerBaseV2 {
     event RequestedRaffelWinner(uint256 indexed requestId);
 
     constructor(
-        uint256 entranceFee,
+        uint64 subscriptionId,
+        bytes32 gasLane, // keyHash
         uint256 interval,
-        address vrfCoordinator,
-        bytes32 gasLane,
-        uint64 s_subscriptionId,
-        uint32 callbackGasLimit
+        uint256 entranceFee,
+        uint32 callbackGasLimit,
+        address vrfCoordinator
     ) VRFConsumerBaseV2(vrfCoordinator) {
         i_entranceFee = entranceFee;
         i_interval = interval;
         s_lastTimeStamp = block.timestamp;
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinator);
-        i_subscriptionId = s_subscriptionId;
+        i_subscriptionId = subscriptionId;
         i_gasLane = gasLane;
         i_gasLimit = callbackGasLimit;
         s_raffelState = RaffelState.OPEN;
@@ -117,12 +118,13 @@ contract Raffel is VRFConsumerBaseV2 {
     function checkUpkeep(
         bytes memory /* checkData */
     ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
-        bool timeHasPassed = (block.timestamp - s_lastTimeStamp) >= i_interval;
-        bool isOpen = s_raffelState == RaffelState.OPEN;
+        bool isOpen = RaffelState.OPEN == s_raffelState;
+        bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
+        bool hasPlayers = s_participants.length > 0;
         bool hasBalance = address(this).balance > 0;
-        bool hasParticipants = s_participants.length > 0;
-        upkeepNeeded = timeHasPassed && isOpen && hasBalance && hasParticipants;
-        return (upkeepNeeded, "0x00");
+        upkeepNeeded = (timePassed && isOpen && hasBalance && hasPlayers);
+
+        return (upkeepNeeded, "0x0");
     }
 
     function performUpkeep(bytes calldata /* performData */) external {
@@ -135,12 +137,13 @@ contract Raffel is VRFConsumerBaseV2 {
             );
         }
         // Pick the winner
-        if (block.timestamp - s_lastTimeStamp < i_interval) {
-            revert();
-        }
+        // if (block.timestamp - s_lastTimeStamp < i_interval) {
+        //     revert();
+        // }
 
         s_raffelState = RaffelState.CALCULATING;
 
+        console.log("This is the  before ");
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane,
             i_subscriptionId,
@@ -148,6 +151,7 @@ contract Raffel is VRFConsumerBaseV2 {
             i_gasLimit,
             NUM_OF_WORDS
         );
+        console.log("This is the  after ");
 
         emit RequestedRaffelWinner(requestId);
     }
